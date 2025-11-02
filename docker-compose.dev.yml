@@ -1,0 +1,50 @@
+version: '3.8'
+
+# Docker Compose for DEVELOPMENT
+# This version is optimized for development with hot-reload
+
+services:
+  # MongoDB Database Service (same as production)
+  db:
+    image: mongo:7.0
+    container_name: journal_db_dev
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data_dev:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: journal_db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # API Server Service (Development Mode)
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: journal_api_dev
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      NODE_ENV: development
+      PORT: 8080
+      MONGODB_URL: mongodb://db:27017
+      MONGODB_DB_NAME: journal_db
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
+    depends_on:
+      db:
+        condition: service_healthy
+    # Mount source code for hot-reload (optional - if you want to edit in container)
+    # volumes:
+    #   - ./backend/src:/app/src
+    #   - ./backend/package.json:/app/package.json
+
+volumes:
+  mongodb_data_dev:
+    driver: local
+

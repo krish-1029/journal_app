@@ -1,0 +1,95 @@
+# Docker Compose file
+# This orchestrates multiple containers to work together
+# In our case: MongoDB + API server
+
+services:
+  # Redis Cache Service
+  # Actionhero uses Redis for caching, tasks, and pub/sub
+  redis:
+    image: redis:7-alpine
+    container_name: journal_redis
+    restart: unless-stopped
+    
+    # Expose Redis port (optional - for debugging)
+    ports:
+      - "6379:6379"
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # MongoDB Database Service
+  db:
+    image: mongo:7.0
+    container_name: journal_db
+    restart: unless-stopped
+    
+    # Expose MongoDB port (optional - for external tools like MongoDB Compass)
+    ports:
+      - "27017:27017"
+    
+    # Persistent data storage
+    # Without this, data would be lost when container stops
+    volumes:
+      - mongodb_data:/data/db
+    
+    # Environment variables for MongoDB
+    environment:
+      MONGO_INITDB_DATABASE: journal_db
+    
+    # Health check - Docker will know when MongoDB is ready
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # API Server Service
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: journal_api
+    restart: unless-stopped
+    
+    # Expose API port - maps container port 8080 to host port 8080
+    ports:
+      - "8080:8080"
+    
+    # Environment variables
+    # These are passed to your Node.js app
+    environment:
+      NODE_ENV: production
+      PORT: 8080
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      MONGODB_URL: mongodb://db:27017
+      MONGODB_DB_NAME: journal_db
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+    
+    # Wait for Redis and MongoDB to be healthy before starting
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    
+    # Health check for API (optional - helps Docker know when API is ready)
+    # We'll just check if the process is running
+    # For full HTTP health check, you could use a tool like curl (install in Dockerfile)
+    healthcheck:
+      test: ["CMD", "node", "-e", "process.exit(0)"]  # Simple: just check if Node is running
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+# Named volumes for persistent data
+# Data survives container restarts/deletions
+volumes:
+  mongodb_data:
+    driver: local
+

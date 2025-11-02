@@ -1,0 +1,80 @@
+# =================================================================
+# ROOT .GITIGNORE
+# Patterns that apply to the entire project (monorepo-wide)
+# =================================================================
+
+# Environment files (CRITICAL - contains secrets!)
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+*.js.map
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.npm
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*~
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+
+# Docker volumes & data
+mongodb_data/
+postgres_data/
+redis_data/
+
+# Redis dumps
+dump.rdb
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Test coverage
+coverage/
+.nyc_output/
+*.lcov
+
+# MacOS
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Optional: Lock files (choose based on team preference)
+# package-lock.json
+# yarn.lock

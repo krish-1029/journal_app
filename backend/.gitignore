@@ -1,0 +1,33 @@
+# =================================================================
+# BACKEND .GITIGNORE
+# Backend-specific patterns (relative to backend/ directory)
+# =================================================================
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+log/
+logs/
+
+# Actionhero specific
+pids/
+tmp/
+cache.dump
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# TypeScript
+*.tsbuildinfo
