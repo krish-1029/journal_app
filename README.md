@@ -1,13 +1,99 @@
-# Quick Journal - Learning Project
+# Quick Journal API
 
-A full-stack journaling app built to learn modern web development frameworks.
+> A production-ready journaling API built with modern Node.js technologies and microservices architecture.
 
-## Tech Stack
+[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=flat&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white)](https://www.docker.com/)
+[![GraphQL](https://img.shields.io/badge/GraphQL-E10098?style=flat&logo=graphql&logoColor=white)](https://graphql.org/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=flat&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
 
-- **Backend**: Actionhero.js (Node.js/TypeScript) with GraphQL
-- **Database**: MongoDB
-- **Frontend**: Flutter (coming soon)
-- **Infrastructure**: Docker & Docker Compose
+## 🚀 Features
+
+- **GraphQL API** - Efficient data querying with Apollo Server
+- **JWT Authentication** - Secure token-based user authentication  
+- **Docker Compose** - Full containerized development environment
+- **MongoDB** - NoSQL database with flexible schema
+- **Redis** - In-memory caching for high performance
+- **TypeScript** - Type-safe development
+- **Actionhero.js** - Production-grade Node.js framework
+
+## 🛠 Tech Stack
+
+| Category | Technology |
+|----------|-----------|
+| **Framework** | Actionhero.js |
+| **API** | GraphQL (Apollo Server) |
+| **Database** | MongoDB |
+| **Cache** | Redis |
+| **Language** | TypeScript |
+| **Auth** | JWT + bcrypt |
+| **Container** | Docker & Docker Compose |
+| **Frontend** | Flutter (planned) |
+
+## 🏗 Architecture
+
+```
+┌─────────────┐
+│   Client    │
+│  (Flutter)  │
+└──────┬──────┘
+       │ HTTP/GraphQL
+       │ JWT Auth
+┌──────▼──────────────────┐
+│   API (Actionhero)      │
+│   - GraphQL Endpoint    │
+│   - JWT Validation      │
+│   - Business Logic      │
+│   Port: 8080            │
+└──────┬────────┬─────────┘
+       │        │
+   ┌───▼───┐ ┌─▼─────┐
+   │MongoDB│ │ Redis │
+   │ Users │ │ Cache │
+   │Entries│ │ Tasks │
+   │:27017 │ │ :6379 │
+   └───────┘ └───────┘
+```
+
+## 🎯 API Examples
+
+### Register a New User
+```bash
+curl -X POST http://localhost:8080/api/graphql \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "mutation { register(email: \"user@example.com\", password: \"securepass\", name: \"John Doe\") { token user { id email name } } }"
+  }'
+```
+
+### Login
+```bash
+curl -X POST http://localhost:8080/api/graphql \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "mutation { login(email: \"user@example.com\", password: \"securepass\") { token user { id email } } }"
+  }'
+```
+
+### Create Journal Entry (Authenticated)
+```bash
+curl -X POST http://localhost:8080/api/graphql \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "query": "mutation { createEntry(title: \"My Day\", content: \"Today was productive!\") { id title content createdAt } }"
+  }'
+```
+
+### Get My Entries
+```bash
+curl -X POST http://localhost:8080/api/graphql \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "query": "{ myEntries { id title content createdAt updatedAt } }"
+  }'
+```
 
 ## Project Structure
 
@@ -91,17 +177,36 @@ curl -X POST http://localhost:8080/api/graphql \
   -d '{"query": "query { me { id email name } }"}'
 ```
 
-## Learning Progress
+## 📋 API Capabilities
 
-- ✅ Step 1: Initialize Actionhero.js project
-- ✅ Step 2: Define GraphQL schema
-- ✅ Step 3: Create MongoDB models with validation
-- ✅ Step 4: Set up Docker & Docker Compose
-- ⏳ Step 5: Initialize Flutter project (next)
-- ⏳ Step 6: Build Flutter UI screens
-- ⏳ Step 7: Connect Flutter to GraphQL API
-- ⏳ Step 8: End-to-end testing
-- ⏳ Step 9: Documentation
+### Implemented ✅
+
+- **User Management**
+  - User registration with email validation
+  - Secure login with JWT token generation
+  - Password hashing with bcrypt
+  
+- **Journal Entries**
+  - Create, read, update, and delete entries
+  - User-specific entry ownership
+  - Timestamp tracking (created/updated)
+
+- **GraphQL API**
+  - Type-safe schema definitions
+  - Authenticated queries and mutations
+  - Context-based authorization
+
+- **Infrastructure**
+  - Dockerized microservices (API, MongoDB, Redis)
+  - Health checks for all services
+  - Volume persistence for database
+
+### Planned 🔄
+
+- Flutter mobile application
+- Entry search and filtering
+- Entry tags and categories
+- User profile customization
 
 ## Documentation
 
