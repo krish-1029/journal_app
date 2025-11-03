@@ -28,7 +28,7 @@
 | **Language** | TypeScript |
 | **Auth** | JWT + bcrypt |
 | **Container** | Docker & Docker Compose |
-| **Frontend** | Flutter (planned) |
+| **Frontend** | Flutter (Web/iOS/Android) |
 
 ## 🏗 Architecture
 
@@ -99,19 +99,35 @@ curl -X POST http://localhost:8080/api/graphql \
 
 ```
 journal_inet/
-├── backend/          # Actionhero.js API server
-├── frontend/         # Flutter mobile app (coming soon)
-├── docker-compose.yml # Orchestrates API + MongoDB
+├── backend/            # Actionhero.js API server
+│   ├── src/
+│   │   ├── actions/    # GraphQL endpoint
+│   │   ├── graphql/    # Schema & resolvers
+│   │   ├── models/     # User & Entry models
+│   │   └── services/   # Auth & database services
+│   ├── Dockerfile
+│   └── package.json
+├── frontend/           # Flutter mobile/web app
+│   ├── lib/
+│   │   ├── config/     # API configuration
+│   │   ├── models/     # Data models
+│   │   ├── providers/  # State management
+│   │   ├── screens/    # UI screens
+│   │   ├── services/   # GraphQL client
+│   │   └── main.dart   # App entry point
+│   └── pubspec.yaml
+├── docker-compose.yml  # Orchestrates backend services
 └── README.md
 ```
 
-## Quick Start with Docker
+## 🚀 Quick Start - Run the Complete Stack
 
 ### Prerequisites
 
-- Docker Desktop installed ([Download here](https://www.docker.com/products/docker-desktop/))
+- **Docker Desktop** - [Download here](https://www.docker.com/products/docker-desktop/)
+- **Flutter SDK** - [Install instructions](https://docs.flutter.dev/get-started/install)
 
-### Steps
+### Backend Setup
 
 1. **Set up environment variables** (optional):
    ```bash
@@ -119,30 +135,61 @@ journal_inet/
    # Edit .env and set JWT_SECRET (or use default)
    ```
 
-2. **Start everything**:
+2. **Start backend services**:
    ```bash
-   docker-compose up
+   docker compose up -d
    ```
 
-   This will:
-   - Build the API Docker image
-   - Start MongoDB container
-   - Start API container
-   - Connect them together
+   This starts:
+   - **MongoDB** (port 27017) - Database
+   - **Redis** (port 6379) - Cache
+   - **API** (port 8080) - GraphQL server
 
-3. **Verify it's working**:
-   - API: http://localhost:8080/api/status
-   - GraphQL: http://localhost:8080/api/graphql
-
-4. **Stop everything**:
+3. **Verify backend is running**:
    ```bash
-   docker-compose down
+   curl http://localhost:8080/api/status
    ```
 
-   To also delete data:
+### Frontend Setup
+
+1. **Install Flutter dependencies**:
    ```bash
-   docker-compose down -v
+   cd frontend
+   flutter pub get
    ```
+
+2. **Run the Flutter app**:
+
+   **For Web** (fastest for development):
+   ```bash
+   flutter run -d chrome
+   ```
+
+   **For iOS Simulator** (macOS only):
+   ```bash
+   flutter run -d "iPhone 15 Pro"
+   ```
+
+   **For Android Emulator**:
+   ```bash
+   flutter run
+   ```
+
+3. **Test the app**:
+   - Register a new account
+   - Create journal entries
+   - Edit and delete entries
+   - Logout and login again
+
+### Stop Everything
+
+```bash
+# Stop backend services
+docker compose down
+
+# Stop backend and delete data
+docker compose down -v
+```
 
 ## Development
 
@@ -203,12 +250,15 @@ curl -X POST http://localhost:8080/api/graphql \
 
 ### Planned 🔄
 
-- Flutter mobile application
 - Entry search and filtering
 - Entry tags and categories
 - User profile customization
+- Rich text editor for entries
+- Dark mode
+- Entry export (PDF/JSON)
 
-## Documentation
+## 📚 Documentation
 
-See `backend/README.md` for detailed backend documentation.
+- **Backend API**: See [`backend/README.md`](backend/README.md) for detailed backend documentation
+- **Flutter App**: See [`frontend/README.md`](frontend/README.md) for Flutter app documentation and architecture
 
