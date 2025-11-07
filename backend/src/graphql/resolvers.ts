@@ -7,6 +7,7 @@ import {
   UserDocument,
   userDocumentToUser,
   validateCreateUserInput,
+  validatePassword,
 } from "../models/User";
 import {
   CreateEntryInput,
@@ -316,6 +317,58 @@ export const resolvers = {
 
       // Delete the entry
       await db.collection("entries").deleteOne({ _id: entryId });
+
+      return true;
+    },
+
+    // Change user's password
+    // Called when client sends: mutation { changePassword(currentPassword: "...", newPassword: "...") }
+    changePassword: async (
+      _parent: any,
+      args: { currentPassword: string; newPassword: string },
+      context: any
+    ) => {
+      const user = getAuthenticatedUser(context);
+      const db = getDb();
+      const { currentPassword, newPassword } = args;
+
+      // Validate new password
+      const validation = validatePassword(newPassword);
+      if (!validation.isValid) {
+        throw new Error(validation.errors.join(", "));
+      }
+
+      // Check that new password is different from current
+      if (currentPassword === newPassword) {
+        throw new Error("New password must be different from current password");
+      }
+
+      // Get the user document with password from database
+      const userDoc = (await db.collection("users").findOne({
+        _id: new ObjectId(user.id),
+      })) as UserDocument | null;
+
+      if (!userDoc) {
+        throw new Error("User not found");
+      }
+
+      // Verify current password
+      const isValidPassword = await bcrypt.compare(
+        currentPassword,
+        userDoc.password
+      );
+      if (!isValidPassword) {
+        throw new Error("Current password is incorrect");
+      }
+
+      // Hash the new password
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+      // Update the password in database
+      await db.collection("users").updateOne(
+        { _id: new ObjectId(user.id) },
+        { $set: { password: hashedPassword } }
+      );
 
       return true;
     },

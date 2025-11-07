@@ -166,6 +166,48 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  /// Change the current user's password
+  Future<bool> changePassword({
+    required GraphQLClient client,
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final result = await client.mutate(
+        MutationOptions(
+          document: gql(GraphQLQueries.changePassword),
+          variables: {
+            'currentPassword': currentPassword,
+            'newPassword': newPassword,
+          },
+        ),
+      );
+
+      if (result.hasException) {
+        _error = result.exception?.graphqlErrors.isNotEmpty == true
+            ? result.exception!.graphqlErrors.first.message
+            : 'Failed to change password';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+
+      final success = result.data?['changePassword'] == true;
+      _isLoading = false;
+      notifyListeners();
+      return success;
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
   /// Logout the current user
   Future<void> logout() async {
     await AuthService.deleteToken();

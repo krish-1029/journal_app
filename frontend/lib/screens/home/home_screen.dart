@@ -6,13 +6,19 @@
 import 'package:flutter/material.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
 
 import '../../providers/auth_provider.dart';
 import '../../providers/entries_provider.dart';
+import '../../providers/theme_provider.dart';
 import '../../models/models.dart';
+import '../../utils/responsive.dart';
+import '../../widgets/entries_layout.dart';
+import '../../widgets/entry_list_item.dart';
+import '../../widgets/entry_editor.dart';
+import '../../widgets/new_entry_creator.dart';
 import '../entry/create_entry_screen.dart';
 import '../entry/entry_detail_screen.dart';
+import '../profile/profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,6 +28,10 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  int _selectedIndex = 0; // For mobile bottom navigation
+  Entry? _selectedEntry; // For desktop split-view
+  bool _isCreatingNewEntry = false; // For desktop new entry mode
+
   @override
   void initState() {
     super.initState();
@@ -38,24 +48,27 @@ class _HomeScreenState extends State<HomeScreen> {
     await entriesProvider.fetchEntries(graphQLClient);
   }
 
-  Future<void> _handleLogout() async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final entriesProvider =
-        Provider.of<EntriesProvider>(context, listen: false);
-
-    // Clear entries
-    entriesProvider.clear();
-
-    // Logout
-    await authProvider.logout();
-
-    // AuthWrapper will automatically navigate to login
+  void _navigateToProfile() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const ProfileScreen()),
+    );
   }
 
   void _navigateToCreateEntry() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const CreateEntryScreen()),
-    );
+    final isMobile = Responsive.isMobile(context);
+    
+    if (isMobile) {
+      // Mobile: Navigate to separate screen
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const CreateEntryScreen()),
+      );
+    } else {
+      // Desktop: Open in split view
+      setState(() {
+        _isCreatingNewEntry = true;
+        _selectedEntry = null;
+      });
+    }
   }
 
   void _navigateToEntryDetail(Entry entry) {
@@ -70,12 +83,77 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
     final entriesProvider = Provider.of<EntriesProvider>(context);
+    final isMobile = Responsive.isMobile(context);
 
+    // On mobile: show tab-based navigation with bottom bar
+    if (isMobile) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(_selectedIndex == 0 ? 'My Journal' : 'Profile'),
+          actions: [
+            // Theme toggle button
+            Consumer<ThemeProvider>(
+              builder: (context, themeProvider, _) {
+                return IconButton(
+                  icon: Icon(
+                    themeProvider.isDark ? Icons.light_mode : Icons.dark_mode,
+                  ),
+                  onPressed: () => themeProvider.toggleTheme(),
+                  tooltip: themeProvider.isDark ? 'Light Mode' : 'Dark Mode',
+                );
+              },
+            ),
+          ],
+        ),
+        body: _selectedIndex == 0
+            ? RefreshIndicator(
+                onRefresh: _fetchEntries,
+                child: entriesProvider.isLoading && entriesProvider.entries.isEmpty
+                    ? const Center(child: CircularProgressIndicator())
+                    : entriesProvider.entries.isEmpty
+                        ? _buildEmptyState()
+                        : EntriesLayout(
+                            entries: entriesProvider.entries,
+                            onEntryTap: _navigateToEntryDetail,
+                          ),
+              )
+            : const ProfileScreen(showAppBar: false), // No AppBar when embedded
+        bottomNavigationBar: NavigationBar(
+          selectedIndex: _selectedIndex,
+          onDestinationSelected: (index) {
+            setState(() {
+              _selectedIndex = index;
+            });
+          },
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.book_outlined),
+              selectedIcon: Icon(Icons.book),
+              label: 'Entries',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.person_outline),
+              selectedIcon: Icon(Icons.person),
+              label: 'Profile',
+            ),
+          ],
+        ),
+        floatingActionButton: _selectedIndex == 0
+            ? FloatingActionButton.extended(
+                onPressed: _navigateToCreateEntry,
+                icon: const Icon(Icons.add),
+                label: const Text('New Entry'),
+              )
+            : null,
+      );
+    }
+
+    // On desktop: show split-view with master-detail
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Journal'),
         actions: [
-          // User info
+          // User name
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
             child: Center(
@@ -85,26 +163,155 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
-          // Logout button
+          // Theme toggle button
+          Consumer<ThemeProvider>(
+            builder: (context, themeProvider, _) {
+              return IconButton(
+                icon: Icon(
+                  themeProvider.isDark ? Icons.light_mode : Icons.dark_mode,
+                ),
+                onPressed: () => themeProvider.toggleTheme(),
+                tooltip: themeProvider.isDark ? 'Light Mode' : 'Dark Mode',
+              );
+            },
+          ),
+          // Profile button
           IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _handleLogout,
-            tooltip: 'Logout',
+            icon: const Icon(Icons.person_outline),
+            onPressed: _navigateToProfile,
+            tooltip: 'Profile',
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: _fetchEntries,
-        child: entriesProvider.isLoading && entriesProvider.entries.isEmpty
-            ? const Center(child: CircularProgressIndicator())
-            : entriesProvider.entries.isEmpty
-                ? _buildEmptyState()
-                : _buildEntriesList(entriesProvider.entries),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _navigateToCreateEntry,
-        icon: const Icon(Icons.add),
-        label: const Text('New Entry'),
+      body: entriesProvider.isLoading && entriesProvider.entries.isEmpty
+          ? const Center(child: CircularProgressIndicator())
+          : entriesProvider.entries.isEmpty
+              ? _buildEmptyState()
+              : _buildDesktopSplitView(entriesProvider.entries),
+    );
+  }
+
+  Widget _buildDesktopSplitView(List<Entry> entries) {
+    return Row(
+      children: [
+        // LEFT PANEL: Master - Entries List
+        SizedBox(
+          width: 400,
+          child: Column(
+            children: [
+              // New Entry Button
+              Container(
+                height: 80,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color: Theme.of(context).colorScheme.outlineVariant,
+                    ),
+                  ),
+                ),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _navigateToCreateEntry,
+                    icon: const Icon(Icons.add),
+                    label: const Text('New Entry'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      elevation: 3, // Add shadow
+                      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
+                    ),
+                  ),
+                ),
+              ),
+
+              // Entries List
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: _fetchEntries,
+                  child: ListView.builder(
+                    itemCount: entries.length,
+                    itemBuilder: (context, index) {
+                      final entry = entries[index];
+                      return EntryListItem(
+                        entry: entry,
+                        isSelected: _selectedEntry?.id == entry.id && !_isCreatingNewEntry,
+                        onTap: () {
+                          setState(() {
+                            _isCreatingNewEntry = false;
+                            _selectedEntry = entry;
+                          });
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Divider
+        const VerticalDivider(width: 1, thickness: 1),
+
+        // RIGHT PANEL: Detail - Entry Editor or New Entry Creator
+        Expanded(
+          child: _isCreatingNewEntry
+              ? NewEntryCreator(
+                  onEntrySaved: (Entry newEntry) {
+                    setState(() {
+                      _isCreatingNewEntry = false;
+                      _selectedEntry = newEntry;
+                    });
+                  },
+                  onCancel: () {
+                    setState(() {
+                      _isCreatingNewEntry = false;
+                    });
+                  },
+                )
+              : _selectedEntry != null
+                  ? EntryEditor(
+                      key: ValueKey(_selectedEntry!.id),
+                      entry: _selectedEntry!,
+                      onDeleted: () {
+                        setState(() {
+                          _selectedEntry = null;
+                        });
+                      },
+                    )
+                  : _buildEmptyDetailState(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmptyDetailState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.article_outlined,
+            size: 100,
+            color: Colors.grey[300],
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Select an entry to view and edit',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: Colors.grey[600],
+                ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Or create a new entry to get started',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.grey[500],
+                ),
+          ),
+        ],
       ),
     );
   }
@@ -132,111 +339,6 @@ class _HomeScreenState extends State<HomeScreen> {
             style: TextStyle(color: Colors.grey[600]),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildEntriesList(List<Entry> entries) {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: entries.length,
-      itemBuilder: (context, index) {
-        final entry = entries[index];
-        return _EntryCard(
-          entry: entry,
-          onTap: () => _navigateToEntryDetail(entry),
-        );
-      },
-    );
-  }
-}
-
-/// Card widget for displaying an entry in the list
-class _EntryCard extends StatelessWidget {
-  final Entry entry;
-  final VoidCallback onTap;
-
-  const _EntryCard({
-    required this.entry,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final dateFormat = DateFormat('MMM dd, yyyy • hh:mm a');
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Title
-              Text(
-                entry.title,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 8),
-
-              // Content preview
-              Text(
-                entry.contentPreview,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.grey[700],
-                    ),
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 12),
-
-              // Date
-              Row(
-                children: [
-                  Icon(
-                    Icons.schedule,
-                    size: 16,
-                    color: Colors.grey[600],
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    dateFormat.format(entry.updatedAt),
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.grey[600],
-                        ),
-                  ),
-                  if (entry.isRecentlyUpdated) ...[
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.green[100],
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        'Recent',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.green[800],
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

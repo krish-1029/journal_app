@@ -81,6 +81,10 @@ export const typeDefs = gql`
     # Delete a journal entry
     # Example: mutation { deleteEntry(id: "123") }
     deleteEntry(id: ID!): Boolean!
+    
+    # Change the current user's password
+    # Example: mutation { changePassword(currentPassword: "old", newPassword: "new123") }
+    changePassword(currentPassword: String!, newPassword: String!): Boolean!
   }
 `;
 

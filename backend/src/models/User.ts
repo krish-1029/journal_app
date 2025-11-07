@@ -107,3 +107,26 @@ export function validateCreateUserInput(input: CreateUserInput): {
   };
 }
 
+/**
+ * Validate password (for password changes)
+ */
+export function validatePassword(password: string): {
+  isValid: boolean;
+  errors: string[];
+} {
+  const errors: string[] = [];
+
+  if (!password || password.length === 0) {
+    errors.push("Password is required");
+  } else if (password.length < 6) {
+    errors.push("Password must be at least 6 characters");
+  } else if (password.length > 128) {
+    errors.push("Password must be less than 128 characters");
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+  };
+}
+

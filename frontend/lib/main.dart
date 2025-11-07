@@ -7,8 +7,10 @@ import 'package:flutter/material.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:provider/provider.dart';
 
+import 'config/app_theme.dart';
 import 'providers/auth_provider.dart';
 import 'providers/entries_provider.dart';
+import 'providers/theme_provider.dart';
 import 'services/graphql_client.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/home/home_screen.dart';
@@ -58,6 +60,8 @@ class MyApp extends StatelessWidget {
           client: snapshot.data!,
           child: MultiProvider(
             providers: [
+              // Theme state
+              ChangeNotifierProvider(create: (_) => ThemeProvider()),
               // Authentication state
               ChangeNotifierProvider(create: (_) => AuthProvider()),
               // Entries state
@@ -77,46 +81,16 @@ class AppContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    
     return MaterialApp(
       title: 'Quick Journal',
       debugShowCheckedModeBanner: false,
       
-      // Theme
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.blue,
-          brightness: Brightness.light,
-        ),
-        useMaterial3: true,
-        
-        // Input decoration theme
-        inputDecorationTheme: InputDecorationTheme(
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          filled: true,
-          fillColor: Colors.grey[50],
-        ),
-        
-        // Button theme
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        ),
-        
-        // Card theme
-        cardTheme: CardThemeData(
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-      ),
+      // Themes
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: themeProvider.themeMode,
       
       // Home route - determines what to show based on auth state
       home: const AuthWrapper(),

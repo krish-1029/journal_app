@@ -36,6 +36,13 @@ class GraphQLQueries {
     }
   ''';
 
+  /// Change user's password
+  static const String changePassword = r'''
+    mutation ChangePassword($currentPassword: String!, $newPassword: String!) {
+      changePassword(currentPassword: $currentPassword, newPassword: $newPassword)
+    }
+  ''';
+
   // ==================== USER QUERIES ====================
 
   /// Get current user profile
